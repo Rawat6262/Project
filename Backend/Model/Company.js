@@ -22,10 +22,19 @@ let Companyschemma = new mongoose.Schema({
     },createdBy:{
         type:mongoose.Schema.ObjectId,
         ref:'exhibition'
-    },exhibition:{
-        type:String,
-        required:true
-    }
+    },
+    about_company:{
+         type: String,
+        required: true,
+    }, path: {
+        type: String,
+        required: true
+    },
+    filename: {
+        type: String,
+        required: true
+    },
+
 });
 let companyModel = mongoose.model('companyModel', Companyschemma);
 module.exports= companyModel;

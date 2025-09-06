@@ -1,97 +1,195 @@
-import axios from 'axios';
-import React, { useState } from 'react';
+import axios from "axios";
+import React, { useState } from "react";
+import { toast } from "sonner";
 
+// --- Reusable Input Components ---
+const InputField = ({ label, value, onChange, placeholder }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <input
+      type="text"
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      required
+      className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 focus:outline-none focus:ring focus:ring-blue-400"
+    />
+  </div>
+);
+
+const DateField = ({ label, value, onChange }) => (
+  <div className="flex-1">
+    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <input
+      type="date"
+      value={value}
+      onChange={onChange}
+      required
+      className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 focus:outline-none focus:ring focus:ring-blue-400"
+    />
+  </div>
+);
+
+const FileField = ({ label, onChange, accept = "image/*" }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <input
+      type="file"
+      onChange={onChange}
+      accept={accept}
+      className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 
+                file:rounded-md file:border-0 file:text-sm file:font-semibold 
+                file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+    />
+  </div>
+);
+
+const TextAreaField = ({ label, value, onChange, placeholder }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <textarea
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      rows={4}
+      required
+      className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 focus:outline-none focus:ring focus:ring-blue-400 resize-none"
+    />
+  </div>
+);
+
+// --- Main Popup Form ---
 const PopupForm = ({ onClose }) => {
-  const [exhibition_name, setname] = useState('');
-  const [Exhibition_address, setaddress] = useState('');
-  const [category, setcategory] = useState('');
+  // State variables
+  const [exhibition_name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [venue, setVenue] = useState("");
+  const [exhibition_address, setAddress] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [exhibition_image, setImage] = useState(null);
+  const [layout, setLayout] = useState(null);
+  const [about_exhibition, setAbout] = useState("");
 
-  const handleexhibition = async (e) => {
+  // Submit handler
+  const handleExhibition = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/Exhibition', {
-        exhibition_name,
-        Exhibition_address,
-        category,
+      const formData = new FormData();
+      formData.append("exhibition_name", exhibition_name);
+      formData.append("category", category);
+      formData.append("venue", venue);
+      formData.append("exhibition_address", exhibition_address);
+      formData.append("starting_date", startDate);
+      formData.append("ending_date", endDate);
+      formData.append("about_exhibition", about_exhibition);
+
+      if (exhibition_image) formData.append("exhibition_image", exhibition_image);
+      if (layout) formData.append("layout", layout);
+
+      await axios.post("/api/exhibition", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      if (response) {
-        alert(response.data);
-        onClose();
-      } else alert('Failed to add');
-    } catch (e) {
-      console.log(e);
+
+      toast.success("Exhibition added successfully!");
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while adding the exhibition.");
     }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-[2px]">
-      <div className="bg-gradient-to-br from-white via-slate-100 to-blue-100 rounded-2xl shadow-2xl p-8 w-full max-w-lg transition-all duration-200 border border-white/60">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-extrabold text-blue-700 tracking-tight">
-            Add Exhibition
-          </h2>
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl border border-gray-100 relative">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-blue-600">Add Exhibition</h2>
           <button
-            className="text-gray-400 hover:text-red-500 text-3xl leading-none font-bold px-2 py-1 rounded-full transition-colors"
             onClick={onClose}
             aria-label="Close"
+            className="text-gray-400 hover:text-red-500 text-2xl font-bold px-2 rounded transition"
           >
             &times;
           </button>
         </div>
-        <form className="space-y-6" onSubmit={handleexhibition}>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 tracking-wide">
-              Exhibition Name
-            </label>
-            <input
-              type="text"
-              name="exhibition_name"
+
+        {/* Ordered Form */}
+        <form
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          onSubmit={handleExhibition}
+          encType="multipart/form-data"
+        >
+          {/* Left Side: Event & Venue */}
+          <div className="space-y-4">
+            <InputField
+              label="Exhibition Name"
               value={exhibition_name}
-              onChange={(e) => setname(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter exhibition name"
-              required
-              className="mt-2 block w-full rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-300 transition-all duration-150"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 tracking-wide">
-              Address
-            </label>
-            <input
-              name="Exhibition_address"
-              type="text"
-              value={Exhibition_address}
-              onChange={(e) => setaddress(e.target.value)}
-              placeholder="Enter address"
-              required
-              className="mt-2 block w-full rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-300 transition-all duration-150"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 tracking-wide">
-              Category
-            </label>
-            <input
-              name="category"
-              type="text"
+            <InputField
+              label="Category"
               value={category}
-              onChange={(e) => setcategory(e.target.value)}
+              onChange={(e) => setCategory(e.target.value)}
               placeholder="Enter category"
-              required
-              className="mt-2 block w-full rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-300 transition-all duration-150"
+            />
+            <InputField
+              label="Venue"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="Enter venue"
+            />
+            <InputField
+              label="Address"
+              value={exhibition_address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter address"
             />
           </div>
-          <div className="flex justify-end space-x-3 pt-4">
+
+          {/* Right Side: Schedule, Uploads & Description */}
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <DateField
+                label="Starting Date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <DateField
+                label="Ending Date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <FileField
+              label="Exhibition Image"
+              onChange={(e) => setImage(e.target.files[0])}
+            />
+            <FileField
+              label="Layout"
+              onChange={(e) => setLayout(e.target.files[0])}
+            />
+            <TextAreaField
+              label="About Exhibition"
+              value={about_exhibition}
+              onChange={(e) => setAbout(e.target.value)}
+              placeholder="Write details about the exhibition..."
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="col-span-1 md:col-span-2 flex justify-end gap-2 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 rounded-full bg-gray-200 text-gray-700 font-semibold shadow hover:bg-gray-300 hover:shadow-md transition-all"
+              className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white font-semibold shadow hover:from-blue-700 hover:to-indigo-600 hover:shadow-lg transition-all"
+              className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
             >
               Save
             </button>

@@ -1,123 +1,175 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import frame from '../assets/Frame 72.png';
-import axios from 'axios';
-import AdminMenu from './Menu.admin';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import AdminMenu from "./Menu.admin";
 
 const AdminDashboard = () => {
   const [bigdata, setBigdata] = useState([]);
-  const [company, setcompany] = useState(987);
-  const [exhibition, setexhibition] = useState(989);
-  const [product, setproduct] = useState(78787);
-  const [url, seturl] = useState('');
+  const [company, setCompany] = useState(0);
+  const [exhibition, setExhibition] = useState(0);
+  const [product, setProduct] = useState(0);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
-  const org = useCallback(async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const result = await axios.get('/api/Dashboard');
-      console.log(result.data);
+      const result = await axios.get("/api/admin/signup");
       setBigdata(result.data);
-      seturl(result.config.url);
     } catch (e) {
-      console.error("Error fetching organisers:", e);
+      console.error("Error fetching dashboard data:", e);
     }
   }, []);
 
   useEffect(() => {
-    org();
-  }, [org]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Filtered data
+  const filteredData = useMemo(() => {
+    return bigdata.filter((item) =>
+      [
+        item.first_name,
+        item.last_name,
+        item.email,
+        item.phonenumber,
+        item.company_name,
+        item.designation,
+      ].some((field) => field?.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [bigdata, search]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+  };
 
   return (
-    <div className="flex flex-col md:flex-row">
-      {/* Sidebar */}
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#FFFFFF] text-gray-900 font-serif">
       <AdminMenu />
 
-      <div className="h-screen w-full flex flex-col">
-        {/* Top bar */}
-        <div className="h-20 w-full flex justify-end bg-gray-100">
-          <div className="h-5 w-5 m-6 mr-6 md:mr-12">
-            <img src={frame} alt="Frame" />
-          </div>
+      <div className="flex-1 w-full mt-8 flex flex-col border border-gray-300 md:ml-10 bg-white rounded-lg shadow-md overflow-y-auto">
+        {/* Header */}
+        <div className="h-20 w-full flex items-center justify-between px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
+          <h1 className="font-bold text-3xl tracking-wide">Admin Dashboard</h1>
+          <button
+            className="h-10 w-48 border-2 border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
+          >
+            + New Organiser
+          </button>
         </div>
 
-        {/* Dashboard cards */}
-        <div className="w-[95%] mx-auto mt-4 flex flex-wrap gap-4 justify-center md:justify-between">
-          <div className="w-full sm:w-48 h-22 rounded-2xl flex flex-col justify-center items-center font-medium bg-blue-100">
-            <div className="h-6 w-36 text-center flex justify-center items-center">Organiser</div>
-            <div className="h-8 w-36 mt-0.5 text-center">{bigdata.length}</div>
-          </div>
-          <div className="w-full sm:w-48 h-22 rounded-2xl flex flex-col justify-center items-center bg-sky-50 font-medium">
-            <div className="h-6 w-36 text-center flex justify-center items-center">Exhibition</div>
-            <div className="h-8 w-36 mt-0.5 text-center">{exhibition}</div>
-          </div>
-          <div className="w-full sm:w-48 h-22 rounded-2xl flex flex-col justify-center items-center bg-blue-100 font-medium">
-            <div className="h-6 w-36 text-center flex justify-center items-center">Company</div>
-            <div className="h-8 w-36 mt-0.5 text-center">{company}</div>
-          </div>
-          <div className="w-full sm:w-48 h-22 rounded-2xl flex flex-col justify-center items-center bg-sky-50 font-medium">
-            <div className="h-6 w-36 text-center flex justify-center items-center">Product</div>
-            <div className="h-8 w-36 mt-0.5 text-center">{product}</div>
-          </div>
+        {/* Summary Cards */}
+        <div className="w-[95%] mx-auto mt-6 flex flex-wrap gap-6 justify-start">
+          <SummaryCard title="Organiser" value={bigdata.length} />
+          <SummaryCard title="Exhibition" value={exhibition} />
+          <SummaryCard title="Company" value={company} />
+          <SummaryCard title="Product" value={product} />
         </div>
 
-        {/* Main section */}
-        <div className="flex-1 w-[95%] mx-auto mt-5">
-          <div className="flex flex-col md:flex-row justify-between gap-2 px-2">
-            <button className="h-9 w-full md:w-60 border-2 rounded text-blue-400">
-              New Organiser →
-            </button>
-            <input
-              type="text"
-              placeholder="Search"
-              className="h-10 w-full md:w-60 border-2 text-center antialiased border-gray-600 rounded"
-            />
-          </div>
+        {/* Controls */}
+        <div className="py-4 w-[95%] mx-auto flex flex-col lg:flex-row justify-between gap-4 px-4 mt-6">
+          <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">Organisers</h2>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search organisers"
+            className="h-10 w-full sm:w-64 border border-gray-400 rounded-md text-gray-700 placeholder-gray-500 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
 
-          <div className="flex-1 w-full overflow-x-auto text-center mt-4">
-            <table className="w-full min-w-[600px] border-collapse text-center">
-              <thead>
-                <tr className="bg-blue-500 text-white">
-                  <th className="px-3 py-2 text-left border border-gray-300">#</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">Full Name</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">E-mail</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">Phone-number</th>
+        {/* Table */}
+        <div className="flex-1 w-[95%] mx-auto mt-4 rounded-b-lg border border-t-0 border-gray-300 bg-white shadow-sm pb-8 mb-8 overflow-x-auto">
+          <table className="w-full min-w-[700px] border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
+                {["#", "Full Name", "E-mail", "Phone", "Company", "Designation", "Options"].map(
+                  (header) => (
+                    <th
+                      key={header}
+                      className="px-4 py-3 border-r border-gray-300 last:border-r-0"
+                    >
+                      {header}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="p-6 text-center text-gray-600 italic"
+                  >
+                    No data found
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {bigdata.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="px-3 py-2 text-center">
-                      No data available
+              ) : (
+                paginatedData.map((item, index) => (
+                  <tr
+                    key={item._id || index}
+                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                  >
+                    <td className="px-4 py-3 border border-gray-300">
+                      {startIndex + index + 1}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-300">
+                      {`${item.first_name || ""} ${item.last_name || ""}`.trim()}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-300">{item.email}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.phonenumber}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.company_name}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.designation}</td>
+                    <td className="px-4 py-3 border border-gray-300">
+                      <button className="border-2 border-blue-500 text-blue-500 rounded-md px-3 py-1 hover:bg-blue-100 transition-colors">
+                        Edit
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  bigdata.map((item, index) => (
-                    <tr
-                      key={item._id || index}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                    >
-                      <td className="px-3 py-2 text-left border border-gray-300">
-                        {index + 1}
-                      </td>
-                      <td className="px-3 py-2 text-left border border-gray-300">
-                        {item.fullname}
-                      </td>
-                      <td className="px-3 py-2 text-left border border-gray-300">
-                        {item.email}
-                      </td>
-                      <td className="px-3 py-2 text-left border border-gray-300">
-                        {item.phonenumber}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
 
-          <div className="mb-0.5 h-9 border-2 w-full flex text-center font-bold justify-center m-2"></div>
+          {/* Pagination Controls */}
+          <div className="mt-6 flex justify-center gap-4 items-center">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-md hover:bg-blue-100 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-gray-700 font-semibold">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-md hover:bg-blue-100 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+// Reusable summary card
+const SummaryCard = ({ title, value }) => (
+  <div className="h-24 w-48 rounded-xl flex flex-col justify-center items-center bg-white border border-gray-300 shadow-sm">
+    <p className="text-lg font-medium text-gray-700">{title}</p>
+    <p className="text-4xl font-bold text-gray-900">{value}</p>
+  </div>
+);
 
 export default AdminDashboard;

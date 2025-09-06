@@ -1,92 +1,144 @@
-
+const path = require('path');
 const companyModel = require('../Model/Company');
 const exhibitionModel = require('../Model/Exhibition');
-let Signupmodel = require('../Model/SignupModel');
+const ProductModel = require('../Model/ProductModel');
+const Signupmodel = require('../Model/SignupModel');
 const { setExhibition, setname } = require('../Service/Auth');
+const fs = require('fs');
+const mongoose = require("mongoose");   // ✅ FIXED (no import, use require)
+
+// ✅ Helper to handle server errors consistently
+const handleServerError = (res, err, message = "Internal Server Error") => {
+  console.error("❌", err);
+  return res.status(500).json({ message });
+};
+
+// ✅ Signup
 async function handlesignup(req, res) {
-  let { first_name,last_name,designation,mobile_number,password,address,email, website,state,city,country,company_name } = req.body;
-  let sign = await Signupmodel.create({
-    first_name,last_name,designation,password,mobile_number,address,website,city,email ,state,country,company_name})
-  if (!sign) res.send('Signup failed');
+  try {
+    const { first_name, last_name, designation, mobile_number, password, address, email, website, state, city, country, company_name } = req.body;
 
-  let token = setExhibition(sign)
-  // console.log(token)
-  res.cookie('uid', token);
-  res.send('new user create')
-}
+    const sign = await Signupmodel.create({
+      first_name,
+      last_name,
+      designation,
+      password,
+      mobile_number,
+      address,
+      website,
+      city,
+      email,
+      state,
+      country,
+      company_name
+    });
 
-async function handlelogin(req, res) {
-  let { email, password } = req.body;
-  let ress = await Signupmodel.findOne({
-    email: email,
-    password: password
-  })
-  if (!ress) {
-    return res.send('login failed');
+    if (!sign) return res.status(400).send('Signup failed');
+
+    const token = setExhibition(sign);
+    res.cookie('uid', token).status(201).send('New user created');
+  } catch (err) {
+    return handleServerError(res, err, "Signup failed");
   }
-  // console.log('dfvfvdsfvv', ress)
-  let token = setExhibition(ress)
-  // console.log(token)
-  res.cookie('uid', token);
-  return res.send('login successful')
-}
-async function handleorganiser(req, res) {
-  let result = await Signupmodel.find({});
-  res.send(result)
 }
 
+// ✅ Login
+async function handlelogin(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    const user = await Signupmodel.findOne({ email, password });
+    if (!user) return res.status(401).send('Login failed');
+
+    const token = setExhibition(user);
+    res.cookie('uid', token).send('Login successful');
+  } catch (err) {
+    return handleServerError(res, err, "Login failed");
+  }
+}
+
+// ✅ Get all organisers
+async function handleorganiser(req, res) {
+  try {
+    const result = await Signupmodel.find({});
+    res.json(result);
+  } catch (err) {
+    return handleServerError(res, err, "Failed to fetch organisers");
+  }
+}
+
+// ✅ Get exhibitions created by logged-in user
 async function handleGetExhibition(req, res) {
   try {
     const userId = req.user?._id;
+    if (!userId) return res.status(400).json({ message: 'User ID is missing' });
 
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is missing in request' });
-    }
-
-    const exhibitions = await exhibitionModel
-      .find({ createdby: userId })
-      .lean();
-
+    const exhibitions = await exhibitionModel.find({ createdby: userId }).lean();
     res.status(200).json(exhibitions);
   } catch (err) {
-    console.error('Error fetching exhibitions:', err);
-    res.status(500).json({ message: 'Failed to fetch exhibitions' });
+    return handleServerError(res, err, "Failed to fetch exhibitions");
   }
 }
 
-
+// ✅ Add new exhibition
 async function handleExhibition(req, res) {
-  // console.log(req)
   try {
-    const { exhibition_name, Exhibition_address, category } = req.body;
-    let userid = req.user._id;
-    let emailex = req.user.email;
-    console.log(emailex)
+    console.log("Uploaded Files:", req.files);
+
+    const exhibitionImage = req.files["exhibition_image"]?.[0];
+    const layoutFile = req.files["layout"]?.[0];
+
+    if (!exhibitionImage || !layoutFile) {
+      return res.status(400).json({ message: "Both exhibition image and layout are required" });
+    }
+
+    const {
+      exhibition_name,
+      exhibition_address,
+      category,
+      starting_date,
+      ending_date,
+      venue,
+      about_exhibition,
+    } = req.body;
+
+    const { _id: userId, email } = req.user;
+
     const newExhibition = await exhibitionModel.create({
       exhibition_name,
-      exhibition_address: Exhibition_address,
-      addedBy: emailex,
+      exhibition_address,
       category,
-      createdby: userid
+      starting_date,
+      ending_date,
+      venue,
+      createdby: userId,
+      addedBy: email,
+      about_exhibition,
+
+      // 👇 These fields are required in your schema
+      exhibtion_path: exhibitionImage.path,
+      exhibtion_filename: exhibitionImage.filename,
+      layout_path: layoutFile.path,
+      layout_filename: layoutFile.filename,
     });
 
-    console.log('Exhibition created:', newExhibition);
-    if (!newExhibition) return res.send('Exhibition Failed');
-    let token = setname(newExhibition)
-    res.cookie('name', token)
-    res.send('Exhibition added successfully');
+    if (!newExhibition) {
+      return res.status(400).send("Exhibition creation failed");
+    }
+
+    const token = setname(newExhibition);
+    res.cookie("name", token).send("Exhibition added successfully");
   } catch (err) {
-    console.error('Error creating exhibition:', err);
-    res.status(500).send('Failed to create exhibition');
+    return handleServerError(res, err, "Failed to create exhibition");
   }
 }
 
+// ✅ Add new company
 async function handlepostcompany(req, res) {
-  // console.log(req.body);
-  const { company_name, company_email, company_nature, company_phone_number, company_address, pincode } = req.body;
-  let id = req.exhibition._id;
-  let name = req.exhibition.Exhibition;
   try {
+    let { path, filename } = req.file;
+    const { company_name, company_email, company_nature, about_company, company_phone_number, company_address, pincode, createdBy } = req.body;
+
     const company = await companyModel.create({
       company_name,
       company_email,
@@ -94,44 +146,178 @@ async function handlepostcompany(req, res) {
       company_phone_number,
       company_address,
       pincode,
-      createdBy: id,
-      exhibition: name
+      createdBy,
+      about_company, path, filename
     });
 
-    if (!company) {
-      return res.status(400).send('Company not added');
+    res.status(201).json({ message: 'Company added successfully', company });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'Company with this phone number already exists' });
     }
-console.log('company_created', company)
-    return res.status(201).send('Company added successfully');
-  } catch (e) {
-    console.error(e);
-
-    if (e.code === 11000) {
-      return res.status(400).send('Company with this phone number already exists');
-    }
-
-    return res.status(500).send('Internal Server Error');
+    return handleServerError(res, err, "Failed to add company");
   }
 }
 
+// ✅ Find exhibition by ID
+async function handleFindExhibition(req, res) {
+  try {
+    const id = req.params.id || req.body.id;
+    if (!id) return res.status(400).json({ error: "Exhibition ID is required" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid Exhibition ID" });
+    }
+
+    const exhibition = await exhibitionModel.findById(id).lean();
+    if (!exhibition) return res.status(404).json({ error: "Exhibition not found" });
+
+    return res.json(exhibition);
+  } catch (err) {
+    return handleServerError(res, err, "Failed to fetch exhibition");
+  }
+}
+
+// ✅ Delete exhibition
+async function handleDelete(req, res) {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: "Exhibition ID is required" });
+
+    const deletedExhibition = await exhibitionModel.findByIdAndDelete(id);
+    const deletecompany = await companyModel.deleteMany({ createdBy: id });
+    const deleteproduct = await ProductModel.deleteMany({ exhibitionid: id });
+
+    if (!deletedExhibition && !deletecompany && !deleteproduct) return res.status(404).json({ error: "Exhibition not found" });
+
+    return res.json({
+      message: "✅ Exhibition deleted successfully",
+      deletedExhibition,
+    });
+  } catch (err) {
+    console.error("Error deleting exhibition:", err);
+    return res.status(500).json({ error: "Failed to delete exhibition" });
+  }
+}
+
+// ✅ Get company by ID
+async function handleGetaddCompany(req, res) {
+  try {
+    const { id } = req.params;
+    const company = await companyModel.findById(id);
+
+    if (!company) return res.status(404).json({ message: "Company not found" });
+    res.json(company);
+  } catch (err) {
+    return handleServerError(res, err, "Failed to fetch company");
+  }
+}
+
+// ✅ Get products by company
+async function handleGetproduct(req, res) {
+  try {
+    const { id } = req.params;
+    const company = await ProductModel.find({ createdBy: id });
+
+    if (!company) return res.status(404).json({ message: "Product not found" });
+    res.json(company);
+  } catch (err) {
+    return handleServerError(res, err, "Failed to fetch Product");
+  }
+}
+
+// ✅ Get companies by creator ID
 async function handleGetCompany(req, res) {
   try {
-    const id = req.exhibition?._id;
-    const name = req.exhibition?.Exhibition;
-    console.log(id);
-    if (!id) {
-      return res.status(400).json({ message: 'Exhibition ID is missing' });
-    }
+    const { id } = req.params;
+    const company = await companyModel.find({ createdBy: id });
 
-    const companies = await companyModel.find({ createdBy: id });
-
-    res.status(200).json(companies);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+    res.json(company);
   } catch (err) {
-    console.error('Error fetching Company:', err);
-    res.status(500).json({ message: 'Failed to fetch Company' });
+    return handleServerError(res, err, "Failed to fetch company");
   }
 }
 
-module.exports = {
-  handlesignup, handlelogin, handlepostcompany, handleGetCompany, handleorganiser, handleExhibition, handleGetExhibition
+// ✅ Add new product
+async function handlePostProduct(req, res) {
+  try {
+    console.log("Uploaded File:", req.file);
+    const { path, filename } = req.file;
+    const { product_name, category, price, details, createdBy, exhibitionid } = req.body;
+
+    const product = await ProductModel.create({
+      product_name,
+      category,
+      price,
+      details,
+      path,
+      filename,
+      createdBy,
+      exhibitionid
+    });
+
+    res.json({
+      message: "✅ Product uploaded successfully",
+      product
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "❌ Upload failed", error: err.message });
+  }
 }
+
+// ✅ Find signup user by ID
+async function handlefindsignup(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await Signupmodel.findById(id);
+    if (!result) return res.status(404).json({ message: "User not found" });
+
+    res.send(result);
+  } catch (err) {
+    return handleServerError(res, err, "Signup failed");
+  }
+}
+
+
+
+async function handlegetBrochure(req, res) {
+  try {
+    const { id } = req.params;
+    console.log(id)
+    const companyData = await companyModel.findById(id);
+    console.log(companyData)
+    if (!companyData) {
+      return res.status(404).json({ msg: "Company not found" });
+    }
+
+    if (!companyData.filename) {
+      return res.status(404).json({ msg: "No brochure uploaded for this company" });
+    }
+
+    const filePath = path.resolve("company_uploads", companyData.filename);
+    return res.download(filePath, companyData.filename);
+  } catch (error) {
+    console.error("Error downloading brochure:", error);
+    return res.status(500).json({ msg: "Server error" });
+  }
+}
+
+
+
+module.exports = {
+  handlegetBrochure,
+  handlesignup,
+  handleDelete,
+  handlelogin,
+  handleorganiser,
+  handleGetExhibition,
+  handleExhibition,
+  handlepostcompany,
+  handleFindExhibition,
+  handleGetCompany,
+  handleGetaddCompany,
+  handlePostProduct,
+  handleGetproduct,
+  handlefindsignup
+};

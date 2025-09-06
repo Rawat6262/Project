@@ -1,17 +1,25 @@
 let express = require('express');
-// const { route } = require('./Route/Route');
-const {router,getRouter} = require('./Route/Route');
+const router = require('./Route/Route'); // ✅ fixed import
 const Connection = require('./Connection/Connection');
 const cookieParser = require('cookie-parser');
+const path = require('path')
+
 let app = express();
-Connection("mongodb://127.0.0.1:27017/onexhib").then(()=>{
-    console.log('database connections has been connected')
-}).catch((e)=> console.log('error:',e));
-app.use(express.urlencoded({extended:false}));
-// app.use(express.urlencoded({ extended: true }));
+
+// DB Connection
+Connection("mongodb://127.0.0.1:27017/onexhib")
+  .then(() => {
+    console.log('✅ Database connection has been established');
+  })
+  .catch((e) => console.log('❌ DB error:', e));
+
+// Middleware
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(cookieParser())
-app.use('/',router);
+app.use(cookieParser());
+app.use( express.static(path.resolve("company_uploads")));
+// Routes
+app.use('/', router); // ✅ router now works
 
-
-app.listen(8000,()=> console.log('Server Started at Port 8000'));
+// Server
+app.listen(8000, () => console.log('🚀 Server Started at Port 8000'));

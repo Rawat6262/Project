@@ -1,39 +1,42 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "sonner";
 import { toast } from "sonner";
-// import { Toaster } from "sonner"; // Thies is correct, not @/components
-
+import logo from '../assets/Dark.png'
 const LoginForms = () => {
   const [email, setemail] = useState('');
   const [password, setpassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   let navigate = useNavigate();
 
   const handleSignup = () => {
     navigate('/api/Signup');
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const { data } = await axios.post('/api/login', { email, password });
-    console.log(data);
-    if (data === 'login failed') {
-      // toast.error('Please connect to backend.');
-      toast.error("Login failed!");
+  const handleForgotPassword = () => {
+    navigate('/api/forgot-password');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { data } = await axios.post('/api/login', { email, password, rememberMe });
+      console.log(data);
+      if (data === 'login failed') {
+        toast.error("Login failed!");
+        navigate('/api/Signup');
+      } else {
+        toast.success("Login successful!");
+        navigate('/api/organiser');
+      }
+    } catch (error) {
+      const message = error.message;
+      console.error('Login error:', message);
+      toast.error(`Login failed! ${message}`);
       navigate('/api/Signup');
-    } else {
-      toast.success("Login successful!");
-      navigate('/api/organiser');
     }
-  } catch (error) {
-    const message = error.message;
-    console.error('Login error:', message);
-    toast.error(`Login failed! ${message}`);
-    navigate('/api/Signup');
-  }
-};
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-white to-purple-100 p-6">
@@ -42,9 +45,7 @@ const LoginForms = () => {
         className="w-full max-w-md p-8 rounded-2xl bg-white shadow-2xl border border-gray-200 space-y-8"
         style={{ boxShadow: '0 4px 48px 0 rgba(60,60,120,0.10)' }}
       >
-        <h2 className="text-3xl font-bold text-center text-blue-800 mb-8 tracking-tight">
-          Login
-        </h2>
+        <div className='flex justify-center items-center '><img src={logo}/> </div>
         <div className="space-y-6">
           {/* Email */}
           <div>
@@ -63,7 +64,7 @@ const LoginForms = () => {
             />
           </div>
 
-          {/* Password */}
+          {/* Password with forgot password link */}
           <div>
             <label className="block mb-2 text-sm font-semibold text-gray-700" htmlFor="password">
               Password
@@ -78,6 +79,24 @@ const LoginForms = () => {
               placeholder="Password"
               className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
             />
+            <div className="flex justify-between mt-2">
+              <label className="flex items-center text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={() => setRememberMe((prev) => !prev)}
+                  className="mr-2 accent-blue-600"
+                />
+                Remember me
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-blue-600 hover:underline text-sm font-medium"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
         </div>
         <button
@@ -93,7 +112,7 @@ const LoginForms = () => {
         >
           Signup
         </button>
-          <Toaster />
+        <Toaster />
       </form>
     </div>
   );

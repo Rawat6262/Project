@@ -73,3 +73,4 @@ Signupschema.pre('save', function (next) {
 let Signupmodel = mongoose.model('Signupmodel', Signupschema);
 
 module.exports = Signupmodel;
+ 

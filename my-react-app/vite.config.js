@@ -10,6 +10,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
+  theme: {
+  extend: {
+    fontFamily: {
+      poppins: ['Poppins', 'sans-serif'],
+    },
+  },
+}
+,
    server: {
     proxy: {
       '/api': 'http://localhost:8000',
