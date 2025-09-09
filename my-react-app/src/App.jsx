@@ -25,7 +25,6 @@ export default function App() {
   // },[])
   return (
     <>
-    
       {role === 'NORMAL' ? (
         <Routes>
           <Route path="/" element={<LoginForms />} />
