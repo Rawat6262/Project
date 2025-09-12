@@ -14,7 +14,7 @@ import User from "./Component/User";
 import CompanyDetail from "./Component/Products";
 import AdminDashboard from "./Admin/Dashboard.admin";
 
-let role = 'NORMAL';
+let role = 'NOMAL';
 
 export default function App() {
   // let fetchdata = ()=>{
@@ -37,7 +37,8 @@ export default function App() {
       ) : (
         <Routes> 
           <Route path="/" element={<AdminDashboard/>} />
-          <Route path="/api/Admin/organiser" element={<AdminOrganiser />} />
+          <Route path="/api/organiser" element={<AdminOrganiser />} />
+          <Route path="/organiser/:id" element={<User/>} />
           <Route path="/api/Admin/Company" element={<AdminCompany />} />
           <Route path="/api/Admin/Products" element={<AdminProducts />} />
         </Routes>

@@ -1,85 +1,171 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import AdminMenu from './Menu.admin';
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import AdminMenu from "./Menu.admin";
+import PopupForm from "../Component/PopupForm";// 👈 popup form for adding new company
+import { toast } from "sonner";
 
 const AdminCompany = () => {
-  const [bigdata, setBigdata] = useState([]);
-  const [company, setcompany] = useState(987);
-  const [exhibition, setexhibition] = useState(989);
-  const [product, setproduct] = useState(78787);
-  let navigator = useNavigate();
-let handleneworg = ()=>{
-  navigator('/api/Organiser')
-}
-  const org = useCallback(async () => {
+  const navigate = useNavigate();
+  const [companies, setCompanies] = useState([]);
+  const [exhibition, setExhibition] = useState(0);
+  const [companyCount, setCompanyCount] = useState(0);
+  const [productCount, setProductCount] = useState(0);
+  const [showForm, setShowForm] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  // ✅ Fetch all companies
+  const fetchCompanies = useCallback(async () => {
     try {
-      const result = await axios.get('/api/Dashboard');
-      console.log(result);
-      // console.log(resu);
-      setBigdata(result.data);
-    } catch (e) {
-      console.error("Error fetching organisers:", e);
+      const { data } = await axios.get("/api/Dashboard");
+      setCompanies(Array.isArray(data) ? data : []);
+      setCompanyCount(data.length || 0);
+    } catch (err) {
+      console.error("❌ Error fetching companies:", err);
+      toast.error("Failed to fetch companies");
     }
   }, []);
 
   useEffect(() => {
-    org();
-  }, [org]);
-  console.log(bigdata)
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  // ✅ Search filter
+  const filteredCompanies = useMemo(() => {
+    return companies.filter((c, index) => {
+      const query = search.toLowerCase();
+      const rowNumber = (index + 1).toString();
+      return (
+        rowNumber.includes(query) ||
+        (c.fullname || "").toLowerCase().includes(query) ||
+        (c.email || "").toLowerCase().includes(query) ||
+        (c.phonenumber || "").toLowerCase().includes(query)
+      );
+    });
+  }, [companies, search]);
+
+  // ✅ Pagination
+  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCompanies = filteredCompanies.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+  };
+
   return (
-    <div className="flex flex-row">
-        {/* Main content */}
-        {<AdminMenu/>}
-      <div className=" h-screen w-full mt-8 flex flex-col border-2 ml-10">
-        <div className=" h-10 w-full  flex bg-gray-100 border-2 justify-between">
-          <div className='h-9 w-40 border-2 '><h1 className='font-bold text-2xl'>SEM  GROUP</h1></div>
-        <button className='h-9 w-45 border-2 text-blue-300 border-blue-400 rounded'>View Organiser Details</button>
-        </div> 
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#FFFFFF] text-gray-900 font-serif">
+      {/* Sidebar */}
+      <AdminMenu />
 
-        <div className=" h-25 w-[95%] ml-5 mt-4 flex justify-baseline">
-    
-          <div className="h-25 w-48 rounded-2xl flex flex-col mr-8 justify-center items-center bg-sky-50 font-medium">
-            <div className=" h-6 w-36 text-center flex justify-center items-center">exhibition</div>
-            <div className=" h-8 w-36 mt-0.5 text-center">{exhibition}</div>
-          </div>
-          <div className="font-medium h-25 w-48 rounded-2xl flex flex-col justify-center items-center bg-blue-100">
-            <div className=" h-6 w-36 text-center flex justify-center items-center">Company</div>
-            <div className=" h-8 w-36 mt-0.5 text-center">{company}</div>
-          </div>
-     </div>
+      {/* Main Content */}
+      <div className="flex-1 w-full mt-8 flex flex-col border border-gray-300 md:ml-10 bg-white rounded-lg shadow-md overflow-y-auto">
+        {/* Header */}
+        <div className="h-20 w-full flex flex-col sm:flex-row justify-between items-center px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
+          <h1 className="font-bold text-3xl tracking-wide">Company Dashboard</h1>
+          <button
+            onClick={() => setShowForm(true)}
+            className="h-10 w-48 border border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
+          >
+            + Add Company
+          </button>
+        </div>
 
-        <div className=" flex-1 w-[95%] mt-5 ml-5 border-2" >
-          <div className=" h-10 w-full flex justify-between px-2 border-2 text-center">
-            <h1 className='font-bold text-2xl'>Exhibition List</h1>
-            <div>
-            <input type="text" placeholder="Search" className="h-10 w-60 border-2 mr-7 text-center antialiased border-gray-600 rounded" />
-            <button className="h-11 w-60 border-2 rounded text-blue-400 " onClick={handleneworg} >New Organiser →</button>
-          </div>
+        {/* Summary Cards */}
+        <div className="w-[95%] mx-auto mt-6 flex flex-wrap gap-6 justify-start">
+          {[
+            { title: "Total Companies", value: companyCount },
+            { title: "Exhibitions", value: exhibition },
+            { title: "Products", value: productCount },
+          ].map((card) => (
+            <div
+              key={card.title}
+              className="h-24 w-48 rounded-xl flex flex-col justify-center items-center bg-white border border-gray-300 shadow-sm"
+            >
+              <p className="text-lg font-medium text-gray-700">{card.title}</p>
+              <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Table Section */}
+        <div className="flex-1 w-[95%] mx-auto mt-8 rounded-b-lg border border-t-0 border-gray-300 bg-white shadow-sm pb-8 mb-8">
+          {/* Controls */}
+          <div className="py-4 w-full flex flex-col lg:flex-row justify-between gap-4 px-4">
+            <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">
+              Company List
+            </h2>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search by name, email, phone or #..."
+              className="h-10 w-full sm:w-64 border border-gray-400 rounded-md text-gray-700 placeholder-gray-500 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
 
-          <div className=" flex-1 w-full overflow-x-auto text-center">
-            <table className="w-full min-w-[600px] border-collapse text-center ">
+          {/* Table */}
+          <div className="flex-1 w-full overflow-x-auto text-left mt-6">
+            <table className="w-full min-w-[700px] border-collapse border border-gray-300">
               <thead>
-                <tr className="bg-blue-500 text-white">
-                  <th classNonClickame="px-3 py-2 text-left border border-gray-300">#</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">Full Name</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">E-mail</th>
-                  <th className="px-3 py-2 text-left border border-gray-300">Phone-number</th>
+                <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
+                  {["#", "Full Name", "E-mail", "Phone", "Action"].map(
+                    (header) => (
+                      <th
+                        key={header}
+                        className="px-4 py-3 border-r border-gray-300 last:border-r-0"
+                      >
+                        {header}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {bigdata.length === 0 ? (
+                {paginatedCompanies.length === 0 ? (
                   <tr>
-                    <td colSpan="3" className="px-3 py-2 text-center">No data available</td>
+                    <td
+                      colSpan="5"
+                      className="p-6 text-center text-gray-600 italic"
+                    >
+                      No companies found
+                    </td>
                   </tr>
                 ) : (
-                  bigdata.map((item, index) => (
-                    <tr key={item._id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-3 py-2 text-left border border-gray-300">{index + 1}</td>
-                      <td className="px-3 py-2 text-left border border-gray-300">{item.fullname}</td>
-                      <td className="px-3 py-2 text-left border border-gray-300">{item.email}</td>
-                      <td className="px-3 py-2 text-left border border-gray-300">{item.phonenumber}</td>
+                  paginatedCompanies.map((c, index) => (
+                    <tr
+                      key={c._id || index}
+                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
+                      <td className="px-4 py-3 border border-gray-300">
+                        {startIndex + index + 1}
+                      </td>
+                      <td className="px-4 py-3 border border-gray-300">
+                        {c.fullname}
+                      </td>
+                      <td className="px-4 py-3 border border-gray-300">
+                        {c.email}
+                      </td>
+                      <td className="px-4 py-3 border border-gray-300">
+                        {c.phonenumber}
+                      </td>
+                      <td className="px-4 py-3 border border-gray-300">
+                        <button
+                          onClick={() => navigate(`/company/${c._id}`)}
+                          className="border border-blue-500 text-blue-500 rounded-md px-3 py-1 hover:bg-blue-100 transition-colors"
+                        >
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -87,10 +173,36 @@ let handleneworg = ()=>{
             </table>
           </div>
 
-          <div className="mb-0.5 h-9 border-2 w-full flex text-center font-bold justify-center m-2">
+          {/* Pagination */}
+          <div className="mt-6 flex justify-center gap-4 items-center">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-100 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-gray-700 font-semibold">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-100 disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Popup Form */}
+      {showForm && (
+        <CompanyPopup
+          Close={() => setShowForm(false)}
+          onCompanyAdded={fetchCompanies} // refresh list
+        />
+      )}
     </div>
   );
 };

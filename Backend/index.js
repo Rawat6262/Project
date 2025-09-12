@@ -7,7 +7,7 @@ const path = require('path')
 let app = express();
 
 // DB Connection
-Connection("mongodb://127.0.0.1:27017/onexhib")
+Connection("mongodb+srv://Onexhib:Onexhib@cluster0.01lxubr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
   .then(() => {
     console.log('✅ Database connection has been established');
   })

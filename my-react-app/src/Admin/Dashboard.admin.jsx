@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import AdminMenu from "./Menu.admin";
+import UserPopupForm from "./Popneworganiser"; // 👈 import popup form
 
 const AdminDashboard = () => {
   const [bigdata, setBigdata] = useState([]);
@@ -9,8 +10,10 @@ const AdminDashboard = () => {
   const [product, setProduct] = useState(0);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [showPopup, setShowPopup] = useState(false); // 👈 popup toggle
+  const itemsPerPage = 6;
 
+  // Fetch data
   const fetchDashboardData = useCallback(async () => {
     try {
       const result = await axios.get("/api/admin/signup");
@@ -31,16 +34,20 @@ const AdminDashboard = () => {
         item.first_name,
         item.last_name,
         item.email,
-        item.phonenumber,
+        item.mobile_number,
         item.company_name,
         item.designation,
       ].some((field) => field?.toLowerCase().includes(search.toLowerCase()))
     );
   }, [bigdata, search]);
 
+  // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedData = filteredData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
@@ -55,6 +62,7 @@ const AdminDashboard = () => {
         <div className="h-20 w-full flex items-center justify-between px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
           <h1 className="font-bold text-3xl tracking-wide">Admin Dashboard</h1>
           <button
+            onClick={() => setShowPopup(true)} // 👈 open popup
             className="h-10 w-48 border-2 border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
           >
             + New Organiser
@@ -71,7 +79,9 @@ const AdminDashboard = () => {
 
         {/* Controls */}
         <div className="py-4 w-[95%] mx-auto flex flex-col lg:flex-row justify-between gap-4 px-4 mt-6">
-          <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">Organisers</h2>
+          <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">
+            Organisers
+          </h2>
           <input
             type="text"
             value={search}
@@ -89,16 +99,22 @@ const AdminDashboard = () => {
           <table className="w-full min-w-[700px] border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
-                {["#", "Full Name", "E-mail", "Phone", "Company", "Designation", "Options"].map(
-                  (header) => (
-                    <th
-                      key={header}
-                      className="px-4 py-3 border-r border-gray-300 last:border-r-0"
-                    >
-                      {header}
-                    </th>
-                  )
-                )}
+                {[
+                  "#",
+                  "Full Name",
+                  "E-mail",
+                  "Phone",
+                  "Company",
+                  "Designation",
+                  
+                ].map((header) => (
+                  <th
+                    key={header}
+                    className="px-4 py-3 border-r border-gray-300 last:border-r-0"
+                  >
+                    {header}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -123,15 +139,19 @@ const AdminDashboard = () => {
                     <td className="px-4 py-3 border border-gray-300">
                       {`${item.first_name || ""} ${item.last_name || ""}`.trim()}
                     </td>
-                    <td className="px-4 py-3 border border-gray-300">{item.email}</td>
-                    <td className="px-4 py-3 border border-gray-300">{item.phonenumber}</td>
-                    <td className="px-4 py-3 border border-gray-300">{item.company_name}</td>
-                    <td className="px-4 py-3 border border-gray-300">{item.designation}</td>
                     <td className="px-4 py-3 border border-gray-300">
-                      <button className="border-2 border-blue-500 text-blue-500 rounded-md px-3 py-1 hover:bg-blue-100 transition-colors">
-                        Edit
-                      </button>
+                      {item.email}
                     </td>
+                    <td className="px-4 py-3 border border-gray-300">
+                      {item.mobile_number}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-300">
+                      {item.company_name}
+                    </td>
+                    <td className="px-4 py-3 border border-gray-300">
+                      {item.designation}
+                    </td>
+                    
                   </tr>
                 ))
               )}
@@ -160,6 +180,14 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Popup Form */}
+      {showPopup && (
+        <UserPopupForm
+          onClose={() => setShowPopup(false)} // 👈 match props
+          onSuccess={fetchDashboardData}     // 👈 refresh data
+        />
+      )}
     </div>
   );
 };

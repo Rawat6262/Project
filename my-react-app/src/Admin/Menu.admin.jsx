@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState,useCallback } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Menu, X, LayoutDashboard, Users, User, Package } from "lucide-react"; // added icons
 import logo from "../assets/Untitled-2-01 1.png";
@@ -6,15 +7,28 @@ import logo2 from "../assets/Ellipse 14.png"; // profile placeholder
 
 export default function AdminMenu() {
   const navigate = useNavigate();
+  const [data , setBigdata] = useState([])
   const [isOpen, setIsOpen] = useState(true);
+const fetchDashboardData = useCallback(async () => {
+    try {
+      const result = await axios.get("/api/admin/signup");
 
+      console.log(result.data);
+      setBigdata(result.data);
+    } catch (e) {
+      console.error("Error fetching dashboard data:", e);
+    }
+  }, []);
   const menuItems = [
     { label: "Dashboard", path: "/", icon: <LayoutDashboard size={20} /> },
-    { label: "Organiser", path: "/api/Admin/Organiser", icon: <Users size={20} /> },
+    { label: "Organiser", path: "/api/organiser", icon: <Users size={20} /> },
     { label: "User", path: "/api/Admin/Company", icon: <User size={20} /> },
     { label: "Products", path: "/api/Admin/Products", icon: <Package size={20} /> },
   ];
-
+  useEffect(()=>{
+    fetchDashboardData()
+  },[])
+  console.log(data)
   return (
     <div className={`h-screen ${isOpen ? "w-[256px]" : "w-20"}`}>
       <div
@@ -54,7 +68,7 @@ export default function AdminMenu() {
           <img src={logo2} alt="User Avatar" className="w-10 h-10 rounded-full" />
           {isOpen && (
             <div className="text-white text-sm">
-              <p className="font-bold">John Doe</p>
+              <p className="font-bold">{}</p>
               <p className="opacity-80">admin@onexhib.com</p>
             </div>
           )}
