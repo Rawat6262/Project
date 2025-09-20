@@ -16,7 +16,20 @@ const handleServerError = (res, err, message = "Internal Server Error") => {
 // ✅ Signup
 async function handlesignup(req, res) {
   try {
-    const { first_name, last_name, designation, mobile_number, password, address, email, website, state, city, country, company_name } = req.body;
+    const {
+      first_name,
+      last_name,
+      designation,
+      mobile_number,
+      password,
+      address,
+      email,
+      website,
+      state,
+      city,
+      country,
+      company_name,
+    } = req.body;
 
     const sign = await Signupmodel.create({
       first_name,
@@ -30,19 +43,42 @@ async function handlesignup(req, res) {
       email,
       state,
       country,
-      company_name
+      company_name,
     });
 
-    if (!sign) return res.status(400).send('Signup failed');
+    if (!sign) {
+      return res.status(400).json({ message: "Signup failed" });
+    }
 
     const token = setExhibition(sign);
-    res.cookie('uid', token).status(201).send('New user created');
+    res
+      .cookie("uid", token)
+      .status(201)
+      .json({
+        message: "New user created successfully",
+        user: sign, // ✅ Return the created user for the frontend
+      });
+
   } catch (err) {
     return handleServerError(res, err, "Signup failed");
   }
 }
 
+
 // ✅ Login
+// async function handlelogin(req, res) {
+//   try {
+//     const { email, password } = req.body;
+
+//     const user = await Signupmodel.findOne({ email, password });
+//     if (!user) return res.status(401).send('Login failed');
+//     const token = setExhibition(user);
+//     console.log(user,'rwe')
+//     res.cookie('uid', token).send('Login successful').send(user);
+//   } catch (err) {
+//     return handleServerError(res, err, "Login failed");
+//   }
+// }
 async function handlelogin(req, res) {
   try {
     const { email, password } = req.body;
@@ -51,7 +87,16 @@ async function handlelogin(req, res) {
     if (!user) return res.status(401).send('Login failed');
 
     const token = setExhibition(user);
-    res.cookie('uid', token).send('Login successful');
+    console.log(user, 'rwe');
+
+    res
+      .cookie('uid', token)
+      .status(200)
+      .json({
+        message: 'Login successful',
+        user, // ✅ Send user object along with the message
+      });
+
   } catch (err) {
     return handleServerError(res, err, "Login failed");
   }

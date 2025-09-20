@@ -7,17 +7,19 @@ import OrganiserPopup from "../Component/OrganiserDetails"; // adjust path if ne
 
 const AdminOrganiser = () => {
   const [exhibitions, setExhibitions] = useState([]);
-  const [showOrganiser, setShowOrganiser] = useState(false);
+  const [showOrganiser, setShowOrganiser] = useState(false); // for delete confirmation modal
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [organiserId, setOrganiserId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // Fetch exhibitions
   const fetchExhibitions = async () => {
     try {
+      setLoading(true);
       const { data } = await axios.get("/api/admin/Exhibition");
 
       if (Array.isArray(data) && data.length > 0) {
@@ -29,12 +31,28 @@ const AdminOrganiser = () => {
       }
     } catch (error) {
       console.error("Error fetching exhibitions:", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchExhibitions();
   }, []);
+
+  // Delete all exhibitions
+  const handleDeleteAll = async () => {
+    try {
+      setLoading(true);
+      await axios.delete("/api/admin/deleteallexhibition");
+      setShowOrganiser(false);
+      fetchExhibitions();
+    } catch (error) {
+      console.error("Error deleting exhibitions:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter + paginate
   const filteredData = useMemo(() => {
@@ -63,14 +81,39 @@ const AdminOrganiser = () => {
           <h1 className="flex-1 font-bold text-3xl tracking-wide">SEM GROUP</h1>
           <button
             onClick={() => setShowOrganiser(true)}
-            className="h-10 w-full sm:w-64 border-2 border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
+            className="h-10 w-full sm:w-64 border-2 border-red-500 text-red-500 hover:bg-red-100 rounded-md font-semibold transition-colors"
           >
-            View Organiser Details
+            Delete ALL Exhibition
           </button>
-          {showOrganiser && (
-            <OrganiserPopup Cl={() => setShowOrganiser(false)} data={organiserId} />
-          )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showOrganiser && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+              <h2 className="text-xl font-bold mb-4 text-center">
+                Are you sure?
+              </h2>
+              <p className="text-gray-600 text-center mb-6">
+                This action will permanently delete all exhibitions. This cannot be undone.
+              </p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setShowOrganiser(false)}
+                  className="px-4 py-2 border-2 border-gray-400 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAll}
+                  className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-red-100 transition-colors"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="w-[95%] mx-auto mt-6 flex flex-wrap gap-6 justify-start">
@@ -123,52 +166,56 @@ const AdminOrganiser = () => {
 
           {/* Table */}
           <div className="flex-1 w-full overflow-x-auto text-left mt-6">
-            <table className="w-full min-w-[700px] border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
-                  {["#", "Exhibition BY", "Exhibition Name", "Address", "Category", "Action"].map(
-                    (header) => (
-                      <th
-                        key={header}
-                        className="px-4 py-3 border-r border-gray-300 last:border-r-0"
-                      >
-                        {header}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedData.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="p-6 text-center text-gray-600 italic">
-                      No data found
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedData.map((item, index) => (
-                    <tr
-                      key={item._id || index}
-                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                    >
-                      <td className="px-4 py-3 border border-gray-300">{startIndex + index + 1}</td>
-                      <td className="px-4 py-3 border border-gray-300">{item.addedBy}</td>
-                      <td className="px-4 py-3 border border-gray-300">{item.exhibition_name}</td>
-                      <td className="px-4 py-3 border border-gray-300">{item.exhibition_address}</td>
-                      <td className="px-4 py-3 border border-gray-300">{item.category}</td>
-                      <td className="px-4 py-3 border border-gray-300">
-                        <button
-                          className="border-2 border-blue-500 text-blue-500 rounded-md px-3 py-1 hover:bg-blue-100 transition-colors"
-                          onClick={() => navigate(`/organiser/${item._id}`)}
+            {loading ? (
+              <p className="text-center py-6 text-gray-600">Loading...</p>
+            ) : (
+              <table className="w-full min-w-[700px] border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
+                    {["#", "Exhibition BY", "Exhibition Name", "Address", "Category", "Action"].map(
+                      (header) => (
+                        <th
+                          key={header}
+                          className="px-4 py-3 border-r border-gray-300 last:border-r-0"
                         >
-                          View
-                        </button>
+                          {header}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedData.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="p-6 text-center text-gray-600 italic">
+                        No data found
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paginatedData.map((item, index) => (
+                      <tr
+                        key={item._id || index}
+                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      >
+                        <td className="px-4 py-3 border border-gray-300">{startIndex + index + 1}</td>
+                        <td className="px-4 py-3 border border-gray-300">{item.addedBy}</td>
+                        <td className="px-4 py-3 border border-gray-300">{item.exhibition_name}</td>
+                        <td className="px-4 py-3 border border-gray-300">{item.exhibition_address}</td>
+                        <td className="px-4 py-3 border border-gray-300">{item.category}</td>
+                        <td className="px-4 py-3 border border-gray-300">
+                          <button
+                            className="border-2 border-blue-500 text-blue-500 rounded-md px-3 py-1 hover:bg-blue-100 transition-colors"
+                            onClick={() => navigate(`/organiser/${item._id}`)}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Pagination Controls */}

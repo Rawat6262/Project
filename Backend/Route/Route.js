@@ -19,7 +19,10 @@ const {
 const {
   AdmingetSignup,
   Admingetcompany,
-  Admingetexhibition
+  Admingetexhibition,
+  Admingetproduct,
+  Admindeleteallexhibition,Admindeleteallcompany,
+  Admindeleteallproduct
 } = require('../Controller/Admin.controller');
 
 const {
@@ -68,5 +71,9 @@ router.get('/api/dashboard', handleorganiser);
 router.get('/api/admin/signup', AdmingetSignup);
 router.get('/api/admin/exhibition', Admingetexhibition);
 router.get('/api/admin/company', Admingetcompany);
+router.get('/api/admin/product', Admingetproduct);
+router.delete('/api/admin/deleteallexhibition', Admindeleteallexhibition);
+router.delete('/api/admin/deleteallproduct', Admindeleteallproduct);
+router.delete('/api/admin/deleteallcompany', Admindeleteallcompany);
 
 module.exports = router;

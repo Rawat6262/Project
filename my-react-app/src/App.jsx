@@ -13,8 +13,9 @@ import { useEffect } from "react";
 import User from "./Component/User";
 import CompanyDetail from "./Component/Products";
 import AdminDashboard from "./Admin/Dashboard.admin";
+import axios from "axios";
 
-let role = 'NOMAL';
+let role = 'NORMAL';
 
 export default function App() {
   // let fetchdata = ()=>{
@@ -25,7 +26,7 @@ export default function App() {
   // },[])
   return (
     <>
-      {role === 'NORMAL' ? (
+    
         <Routes>
           <Route path="/" element={<LoginForms />} />
           <Route path="/api/Signup" element={<SignupForms />} />
@@ -33,16 +34,14 @@ export default function App() {
           <Route path="/api/organiser" element={<Organiser />} />
           <Route path="/organiser/:id" element={<User/>} />
           <Route path="/company/:id" element={<CompanyDetail />} />
-        </Routes>
-      ) : (
-        <Routes> 
-          <Route path="/" element={<AdminDashboard/>} />
-          <Route path="/api/organiser" element={<AdminOrganiser />} />
+          <Route path="/api/admin/dashboard" element={<AdminDashboard/>} />
+          <Route path="/api/admin/organiser" element={<AdminOrganiser />} />
           <Route path="/organiser/:id" element={<User/>} />
           <Route path="/api/Admin/Company" element={<AdminCompany />} />
           <Route path="/api/Admin/Products" element={<AdminProducts />} />
+            <Route path="/company/:id" element={<CompanyDetail />} />
         </Routes>
-      )}
+      
       <Toaster position="top-center" richColors />
     </>
   );

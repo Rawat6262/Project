@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import AdminMenu from "./Menu.admin";
-import UserPopupForm from "./Popneworganiser"; // 👈 import popup form
+import UserPopupForm from "./Popneworganiser";
 
 const AdminDashboard = () => {
   const [bigdata, setBigdata] = useState([]);
@@ -10,14 +10,22 @@ const AdminDashboard = () => {
   const [product, setProduct] = useState(0);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showPopup, setShowPopup] = useState(false); // 👈 popup toggle
+  const [showPopup, setShowPopup] = useState(false);
   const itemsPerPage = 6;
 
-  // Fetch data
+  // API calls & state updates
   const fetchDashboardData = useCallback(async () => {
     try {
       const result = await axios.get("/api/admin/signup");
-      setBigdata(result.data);
+      const result2 = await axios.get("/api/admin/exhibition");
+      const result3 = await axios.get("/api/admin/company");
+      const result4 = await axios.get("/api/admin/product");
+
+      setBigdata(result.data || []);
+      setExhibition(result2.data?.length || 0);
+      setCompany(result3.data?.length || 0);
+      setProduct(result4.data?.length || 0);
+
     } catch (e) {
       console.error("Error fetching dashboard data:", e);
     }
@@ -27,21 +35,25 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Filtered data
+  // Fixed and robust search filtering!
   const filteredData = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return bigdata;
     return bigdata.filter((item) =>
       [
-        item.first_name,
-        item.last_name,
-        item.email,
-        item.mobile_number,
-        item.company_name,
-        item.designation,
-      ].some((field) => field?.toLowerCase().includes(search.toLowerCase()))
+        item?.first_name ?? "",
+        item?.last_name ?? "",
+        item?.email ?? "",
+        item?.mobile_number ?? "",
+        item?.company_name ?? "",
+        item?.designation ?? "",
+      ].some((field) =>
+        String(field).toLowerCase().includes(query)
+      )
     );
   }, [bigdata, search]);
 
-  // Pagination
+  // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(
@@ -62,7 +74,7 @@ const AdminDashboard = () => {
         <div className="h-20 w-full flex items-center justify-between px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
           <h1 className="font-bold text-3xl tracking-wide">Admin Dashboard</h1>
           <button
-            onClick={() => setShowPopup(true)} // 👈 open popup
+            onClick={() => setShowPopup(true)}
             className="h-10 w-48 border-2 border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
           >
             + New Organiser
@@ -77,7 +89,7 @@ const AdminDashboard = () => {
           <SummaryCard title="Product" value={product} />
         </div>
 
-        {/* Controls */}
+        {/* Search Bar */}
         <div className="py-4 w-[95%] mx-auto flex flex-col lg:flex-row justify-between gap-4 px-4 mt-6">
           <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">
             Organisers
@@ -99,19 +111,8 @@ const AdminDashboard = () => {
           <table className="w-full min-w-[700px] border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
-                {[
-                  "#",
-                  "Full Name",
-                  "E-mail",
-                  "Phone",
-                  "Company",
-                  "Designation",
-                  
-                ].map((header) => (
-                  <th
-                    key={header}
-                    className="px-4 py-3 border-r border-gray-300 last:border-r-0"
-                  >
+                {["#", "Full Name", "E-mail", "Phone", "Company", "Designation"].map((header) => (
+                  <th key={header} className="px-4 py-3 border-r border-gray-300 last:border-r-0">
                     {header}
                   </th>
                 ))}
@@ -120,45 +121,28 @@ const AdminDashboard = () => {
             <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="p-6 text-center text-gray-600 italic"
-                  >
+                  <td colSpan="6" className="p-6 text-center text-gray-600 italic">
                     No data found
                   </td>
                 </tr>
               ) : (
                 paginatedData.map((item, index) => (
-                  <tr
-                    key={item._id || index}
-                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                  >
-                    <td className="px-4 py-3 border border-gray-300">
-                      {startIndex + index + 1}
-                    </td>
+                  <tr key={item._id || index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <td className="px-4 py-3 border border-gray-300">{startIndex + index + 1}</td>
                     <td className="px-4 py-3 border border-gray-300">
                       {`${item.first_name || ""} ${item.last_name || ""}`.trim()}
                     </td>
-                    <td className="px-4 py-3 border border-gray-300">
-                      {item.email}
-                    </td>
-                    <td className="px-4 py-3 border border-gray-300">
-                      {item.mobile_number}
-                    </td>
-                    <td className="px-4 py-3 border border-gray-300">
-                      {item.company_name}
-                    </td>
-                    <td className="px-4 py-3 border border-gray-300">
-                      {item.designation}
-                    </td>
-                    
+                    <td className="px-4 py-3 border border-gray-300">{item.email}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.mobile_number}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.company_name}</td>
+                    <td className="px-4 py-3 border border-gray-300">{item.designation}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
 
-          {/* Pagination Controls */}
+          {/* Pagination */}
           <div className="mt-6 flex justify-center gap-4 items-center">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -181,18 +165,17 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Popup Form */}
+      {/* Popup */}
       {showPopup && (
         <UserPopupForm
-          onClose={() => setShowPopup(false)} // 👈 match props
-          onSuccess={fetchDashboardData}     // 👈 refresh data
+          onClose={() => setShowPopup(false)}
+          onSuccess={fetchDashboardData}
         />
       )}
     </div>
   );
 };
 
-// Reusable summary card
 const SummaryCard = ({ title, value }) => (
   <div className="h-24 w-48 rounded-xl flex flex-col justify-center items-center bg-white border border-gray-300 shadow-sm">
     <p className="text-lg font-medium text-gray-700">{title}</p>

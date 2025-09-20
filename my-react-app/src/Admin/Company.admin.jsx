@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import AdminMenu from "./Menu.admin";
-import PopupForm from "../Component/PopupForm";// 👈 popup form for adding new company
+import PopupForm from "../Component/PopupForm"; 
 import { toast } from "sonner";
 
 const AdminCompany = () => {
@@ -12,6 +12,8 @@ const AdminCompany = () => {
   const [companyCount, setCompanyCount] = useState(0);
   const [productCount, setProductCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -20,9 +22,18 @@ const AdminCompany = () => {
   // ✅ Fetch all companies
   const fetchCompanies = useCallback(async () => {
     try {
-      const { data } = await axios.get("/api/Dashboard");
-      setCompanies(Array.isArray(data) ? data : []);
-      setCompanyCount(data.length || 0);
+      const { data } = await axios.get("/api/admin/company");
+      const { data2 } = await axios.get("/api/admin/exhibition");
+      const { data3 } = await axios.get("/api/admin/product");
+      if (Array.isArray(data)) {
+        setCompanies(data);
+        setCompanyCount(data.length);
+        setProductCount(data.length);
+        setExhibition(data.length);
+      } else {
+        setCompanies([]);
+        setCompanyCount(0);
+      }
     } catch (err) {
       console.error("❌ Error fetching companies:", err);
       toast.error("Failed to fetch companies");
@@ -33,22 +44,38 @@ const AdminCompany = () => {
     fetchCompanies();
   }, [fetchCompanies]);
 
+  // ✅ Delete all companies
+  const handleDeleteAllCompanies = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.delete("/api/admin/deleteallcompany");
+      toast.success(data.message || "All companies deleted successfully");
+      setShowDeleteConfirm(false);
+      fetchCompanies();
+    } catch (err) {
+      console.error("❌ Error deleting companies:", err);
+      toast.error("Failed to delete companies");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ✅ Search filter
   const filteredCompanies = useMemo(() => {
+    const query = search.toLowerCase();
     return companies.filter((c, index) => {
-      const query = search.toLowerCase();
       const rowNumber = (index + 1).toString();
       return (
         rowNumber.includes(query) ||
-        (c.fullname || "").toLowerCase().includes(query) ||
-        (c.email || "").toLowerCase().includes(query) ||
-        (c.phonenumber || "").toLowerCase().includes(query)
+        (c.company_name || "").toLowerCase().includes(query) ||
+        (c.address || "").toLowerCase().includes(query) ||
+        (c.mobile_number || "").toLowerCase().includes(query)
       );
     });
   }, [companies, search]);
 
   // ✅ Pagination
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage) || 1;
+  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCompanies = filteredCompanies.slice(
     startIndex,
@@ -70,12 +97,41 @@ const AdminCompany = () => {
         <div className="h-20 w-full flex flex-col sm:flex-row justify-between items-center px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
           <h1 className="font-bold text-3xl tracking-wide">Company Dashboard</h1>
           <button
-            onClick={() => setShowForm(true)}
-            className="h-10 w-48 border border-blue-500 text-blue-500 hover:bg-blue-100 rounded-md font-semibold transition-colors"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="h-10 w-48 border border-red-500 text-red-500 hover:bg-red-100 rounded-md font-semibold transition-colors"
           >
-            + Add Company
+            Delete All Company
           </button>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+              <h2 className="text-xl font-bold mb-4 text-center">
+                Are you sure?
+              </h2>
+              <p className="text-gray-600 text-center mb-6">
+                This will permanently delete all companies. This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 border-2 border-gray-400 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAllCompanies}
+                  className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-red-100 transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? "Deleting..." : "Confirm Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="w-[95%] mx-auto mt-6 flex flex-wrap gap-6 justify-start">
@@ -108,7 +164,7 @@ const AdminCompany = () => {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search by name, email, phone or #..."
+              placeholder="Search by name, address, mobile number or #..."
               className="h-10 w-full sm:w-64 border border-gray-400 rounded-md text-gray-700 placeholder-gray-500 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -118,7 +174,7 @@ const AdminCompany = () => {
             <table className="w-full min-w-[700px] border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
-                  {["#", "Full Name", "E-mail", "Phone", "Action"].map(
+                  {["#", "Company Name", "Address", "Mobile Number", "Action"].map(
                     (header) => (
                       <th
                         key={header}
@@ -150,13 +206,13 @@ const AdminCompany = () => {
                         {startIndex + index + 1}
                       </td>
                       <td className="px-4 py-3 border border-gray-300">
-                        {c.fullname}
+                        {c.company_name}
                       </td>
                       <td className="px-4 py-3 border border-gray-300">
-                        {c.email}
+                        {c.company_address}
                       </td>
                       <td className="px-4 py-3 border border-gray-300">
-                        {c.phonenumber}
+                        {c.company_phone_number}
                       </td>
                       <td className="px-4 py-3 border border-gray-300">
                         <button
@@ -198,9 +254,9 @@ const AdminCompany = () => {
 
       {/* Popup Form */}
       {showForm && (
-        <CompanyPopup
+        <PopupForm
           Close={() => setShowForm(false)}
-          onCompanyAdded={fetchCompanies} // refresh list
+          onCompanyAdded={fetchCompanies}
         />
       )}
     </div>

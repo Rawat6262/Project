@@ -1,130 +1,97 @@
-import React, { useState, useMemo, useEffect } from "react";
-import VerticalMenu from "./Menu";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import VerticalMenu from "./Menu";
 import ProductPopupForm from "./Product_popup";
 
 export default function CompanyDetail() {
-  const [showform, setshowform] = useState(false);
   const { id } = useParams();
-
+  const [showForm, setShowForm] = useState(false);
   const [company, setCompany] = useState({});
-  const [products, setProducts] = useState([]); // ✅ must be array
+  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Fetch products
-  const fetchProducts = async () => {
+  /** ✅ Fetch products with memoized function */
+  const fetchProducts = useCallback(async () => {
     try {
       const { data } = await axios.get(`/api/product/${id}`);
-      setProducts(Array.isArray(data) ? data : []); // ✅ ensure array
+      setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error(
-        "❌ Error fetching products:",
-        error.response?.data?.message || error.message
-      );
+      console.error("❌ Error fetching products:", error.message);
     }
-  };
+  }, [id]);
 
-  // Fetch company
-  const fetchCompany = async () => {
+  /** ✅ Fetch company with memoized function */
+  const fetchCompany = useCallback(async () => {
     try {
       const { data } = await axios.get(`/api/company/addproduct/${id}`);
       setCompany(data);
     } catch (error) {
-      console.error(
-        "❌ Error fetching company:",
-        error.response?.data?.message || error.message
-      );
+      console.error("❌ Error fetching company:", error.message);
     }
-  };
-
-  // Debug company once loaded
-  useEffect(() => {
-    if (company?._id) {
-      console.log("✅ Company loaded:", company._id);
-    }
-  }, [company]);
-
-  // Download brochure
-  const fetchBrochure = () => {
-    if (!company?._id) {
-      console.error("❌ Company ID not available yet");
-      return;
-    }
-    window.open(`/api/brochure/${company._id}`, "_blank");
-  };
-
-  // Run on mount / id change
-  useEffect(() => {
-    Promise.all([fetchCompany(), fetchProducts()]);
   }, [id]);
 
-  // Filtering (fixed field name: product_name)
+  /** ✅ Run both fetches on mount */
+  useEffect(() => {
+    fetchCompany();
+    fetchProducts();
+  }, [fetchCompany, fetchProducts]);
+
+  /** ✅ Filtered product list */
   const filteredData = useMemo(() => {
+    const searchTerm = search.toLowerCase();
     return products.filter((item) =>
       [item.product_name, item.category, item.price].some((field) =>
-        field?.toString().toLowerCase().includes(search.toLowerCase())
+        field?.toString().toLowerCase().includes(searchTerm)
       )
     );
   }, [products, search]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+  /** ✅ Pagination logic */
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = filteredData.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+  /** ✅ Brochure handler */
+  const handleBrochureDownload = () => {
+    if (!company?._id) return console.error("Company ID not available yet");
+    window.open(`/api/brochure/${company._id}`, "_blank");
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#FFFFFF] text-gray-900 font-serif">
+    <div className="min-h-screen flex flex-col md:flex-row bg-white text-gray-900 font-serif">
       <VerticalMenu />
 
-      <div className="flex-1 w-full mt-8 flex flex-col border border-gray-300 md:ml-10 bg-white rounded-lg shadow-md overflow-y-auto">
-        {/* Header */}
-        <div className="h-20 w-full flex flex-col sm:flex-row justify-between items-center px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
-          <h1 className="flex-1 font-bold text-3xl tracking-wide">
+      <main className="flex-1 mt-8 md:ml-10 p-4 sm:p-6 bg-white rounded-lg shadow-md border border-gray-300">
+        {/* HEADER */}
+        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-gray-300 pb-4">
+          <h1 className="font-bold text-2xl sm:text-3xl">
             {company.company_name || "Loading..."}
           </h1>
           <button
-            onClick={fetchBrochure}
+            onClick={handleBrochureDownload}
             className="h-10 w-full sm:w-64 border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white rounded-md font-semibold transition-colors"
           >
             Download Brochure
           </button>
-        </div>
+        </header>
 
-        {/* Summary Cards */}
-        <div className="w-[95%] mx-auto mt-6 flex flex-wrap gap-6 justify-start">
-          {[{ title: "Products", value: products.length }].map((card) => (
-            <div
-              key={card.title}
-              className="h-24 w-48 rounded-xl flex flex-col justify-center items-center bg-white border border-gray-300 shadow-sm"
-            >
-              <p className="text-lg font-medium text-gray-700">{card.title}</p>
-              <p className="text-4xl font-bold text-gray-900">{card.value}</p>
-            </div>
-          ))}
-        </div>
+        {/* SUMMARY */}
+        <section className="mt-6 flex flex-wrap gap-4">
+          <div className="h-24 w-48 rounded-xl flex flex-col justify-center items-center bg-white border border-gray-300 shadow-sm">
+            <p className="text-lg font-medium text-gray-700">Products</p>
+            <p className="text-4xl font-bold text-gray-900">{products.length}</p>
+          </div>
+        </section>
 
-        {/* Company Info */}
-        <div className="w-[95%] mx-auto mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* COMPANY INFO */}
+        <section className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="p-5 border rounded-xl shadow-sm bg-gray-50">
-            <p>
-              <b>Phone:</b> {company.company_phone_number}
-            </p>
-            <p>
-              <b>E-Mail:</b> {company.company_email}
-            </p>
-            <p>
-              <b>Address:</b> {company.company_address}
-            </p>
+            <p><b>Phone:</b> {company.company_phone_number}</p>
+            <p><b>E-Mail:</b> {company.company_email}</p>
+            <p><b>Address:</b> {company.company_address}</p>
           </div>
           <div className="p-5 border rounded-xl shadow-sm bg-gray-50">
             <p className="font-bold text-gray-800">About</p>
@@ -132,16 +99,16 @@ export default function CompanyDetail() {
               {company.company_about || "This is a demo about section."}
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* Product List */}
-        <div className="flex-1 w-[95%] mx-auto mt-8 rounded-b-lg border border-t-0 border-gray-300 bg-white shadow-sm pb-8 mb-8">
+        {/* PRODUCT LIST */}
+        <section className="mt-8 border rounded-lg shadow-sm bg-white p-4">
           {/* Controls */}
-          <div className="py-4 w-full flex flex-col lg:flex-row justify-between gap-4 px-4 text-center">
+          <div className="flex flex-col lg:flex-row justify-between gap-4 items-center">
             <h2 className="font-bold text-2xl sm:text-3xl text-gray-800">
               Product List
             </h2>
-            <div className="flex flex-col sm:flex-row gap-4 justify-end">
+            <div className="flex flex-col sm:flex-row gap-4">
               <input
                 type="text"
                 value={search}
@@ -150,36 +117,25 @@ export default function CompanyDetail() {
                   setCurrentPage(1);
                 }}
                 placeholder="Search Products"
-                className="h-10 w-full sm:w-64 border border-gray-400 rounded-md text-gray-700 placeholder-gray-500 px-3 focus:outline-none focus:ring-1 focus:ring-gray-500"
+                className="h-10 w-full sm:w-64 border border-gray-400 rounded-md px-3 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
               />
               <button
                 className="h-10 w-full sm:w-48 border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white rounded-md font-semibold transition-colors"
-                onClick={() => setshowform(true)}
+                onClick={() => setShowForm(true)}
               >
                 + Add Product
               </button>
-              {showform && (
-                <ProductPopupForm
-                  Close={() => setshowform(false)}
-                  data={id}
-                  refreshProducts={fetchProducts} // ✅ pass refresh function
-                  exid={company.createdBy}
-                />
-              )}
             </div>
           </div>
 
           {/* Table */}
-          <div className="flex-1 w-full overflow-x-auto text-left mt-6">
+          <div className="overflow-x-auto mt-6">
             <table className="w-full min-w-[700px] border-collapse border border-gray-300">
               <thead>
-                <tr className="bg-gray-200 text-gray-800 border-b border-gray-300">
+                <tr className="bg-gray-200 text-gray-800">
                   {["#", "Product Name", "Category", "Price", "Action"].map(
                     (header) => (
-                      <th
-                        key={header}
-                        className="px-4 py-3 border-r border-gray-300 last:border-r-0"
-                      >
+                      <th key={header} className="px-4 py-3 border border-gray-300">
                         {header}
                       </th>
                     )
@@ -189,17 +145,14 @@ export default function CompanyDetail() {
               <tbody>
                 {paginatedData.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="5"
-                      className="p-6 text-center text-gray-600 italic"
-                    >
+                    <td colSpan="5" className="p-6 text-center text-gray-600 italic">
                       No products found
                     </td>
                   </tr>
                 ) : (
                   paginatedData.map((item, index) => (
                     <tr
-                      key={item._id || index} // ✅ backend usually sends _id
+                      key={item._id || index}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                     >
                       <td className="px-4 py-3 border border-gray-300">
@@ -214,11 +167,11 @@ export default function CompanyDetail() {
                       <td className="px-4 py-3 border border-gray-300">
                         {item.price}
                       </td>
-                      <td className="px-4 py-3 border border-gray-300">
+                      <td className="px-4 py-3 border border-gray-300 flex gap-2">
                         <button className="px-3 py-1 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white transition-colors">
                           View
                         </button>
-                        <button className="ml-2 px-3 py-1 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition-colors">
+                        <button className="px-3 py-1 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition-colors">
                           Edit
                         </button>
                       </td>
@@ -232,7 +185,7 @@ export default function CompanyDetail() {
           {/* Pagination */}
           <div className="mt-6 flex justify-center gap-4 items-center">
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white disabled:opacity-50 transition-colors"
             >
@@ -242,15 +195,25 @@ export default function CompanyDetail() {
               Page {currentPage} of {totalPages}
             </span>
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white disabled:opacity-50 transition-colors"
             >
               Next
             </button>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
+
+      {/* Popup Form */}
+      {showForm && (
+        <ProductPopupForm
+          Close={() => setShowForm(false)}
+          data={id}
+          refreshProducts={fetchProducts}
+          exid={company.createdBy}
+        />
+      )}
     </div>
   );
 }

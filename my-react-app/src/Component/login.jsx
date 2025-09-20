@@ -21,11 +21,14 @@ const LoginForms = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('/api/login', { email, password, rememberMe });
-      console.log(data);
-      if (data === 'login failed') {
+      const{ data }= await axios.post('/api/login', { email, password, rememberMe });
+      console.log(data.user.role);
+      if (data.message === 'login failed') {
         toast.error("Login failed!");
         navigate('/api/Signup');
+      }else if(data.user.role==='ADMIN'){
+          toast.success("Admin Login successful!");
+        navigate('/api/admin/dashboard');
       } else {
         toast.success("Login successful!");
         navigate('/api/organiser');

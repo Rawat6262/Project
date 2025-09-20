@@ -65,7 +65,7 @@ const Company = () => {
         {/* Header */}
         <div className="h-20 w-full flex flex-col sm:flex-row justify-between items-center px-8 border-b border-gray-300 bg-gray-100 rounded-t-lg">
           <div className="flex-1 font-bold text-3xl tracking-wide">SEM GROUP</div>
-          <button className="h-10 w-full sm:w-64 border border-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-700 font-semibold transition-colors">
+          <button className="h-10 w-full sm:w-64 border border-gray-700 bg-gray-400 hover:bg-gray-300 rounded-md text-gray-700 font-semibold transition-colors">
             View Organiser Details
           </button>
         </div>

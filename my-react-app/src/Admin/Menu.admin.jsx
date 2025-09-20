@@ -20,8 +20,8 @@ const fetchDashboardData = useCallback(async () => {
     }
   }, []);
   const menuItems = [
-    { label: "Dashboard", path: "/", icon: <LayoutDashboard size={20} /> },
-    { label: "Organiser", path: "/api/organiser", icon: <Users size={20} /> },
+    { label: "Dashboard", path: "/api/admin/dashboard", icon: <LayoutDashboard size={20} /> },
+    { label: "Organiser", path: "/api/admin/organiser", icon: <Users size={20} /> },
     { label: "User", path: "/api/Admin/Company", icon: <User size={20} /> },
     { label: "Products", path: "/api/Admin/Products", icon: <Package size={20} /> },
   ];
