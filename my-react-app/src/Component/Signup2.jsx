@@ -94,7 +94,7 @@ function UserForm() {
     try {
       const { data } = await axios.post('/api/signup', form);
       toast.success(typeof data === 'string' ? data : 'User created successfully!');
-      navigate('https://be.onexhib.com/api/organiser');
+      navigate('/api/organiser');
     } catch (error) {
       toast.error(`Submission failed! ${error.message}`);
     }
