@@ -1,4 +1,3 @@
-
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -10,22 +9,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-  theme: {
-  extend: {
-    fontFamily: {
-      poppins: ['Poppins', 'sans-serif'],
-    },
-  },
-}
-,
-   server: {
+  server: {
     proxy: {
-     '/api':'http://localhost:8000/'
+      '/api': {
+        target: 'https://be.onexhib.com', // ✅ HTTPS backend
+        changeOrigin: true,              // ✅ Changes host header to match target
+        secure: true,                    // ✅ Verify SSL cert (set false if self-signed)
+      },
     },
-    // 👇 This is the key!
-    historyApiFallback: true,
   },
-   plugins: [tailwindcss(), react()],
+  plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
