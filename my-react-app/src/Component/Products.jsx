@@ -96,7 +96,7 @@ export default function CompanyDetail() {
           <div className="p-5 border rounded-xl shadow-sm bg-gray-50">
             <p className="font-bold text-gray-800">About</p>
             <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-              {company.company_about || "This is a demo about section."}
+              {company.about_company || "This is a demo about section."}
             </p>
           </div>
         </section>
